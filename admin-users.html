@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Car Rental Admin — Users</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="css/admin.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body class="admin-body">
+
+<aside class="admin-sidebar" id="adminSidebar">
+  <div class="sidebar-logo">CAR<span>RENTAL</span> <small>ADMIN</small></div>
+  <nav class="sidebar-nav">
+    <a href="admin-dashboard.html" class="snav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+    <a href="admin-bookings.html" class="snav-item"><i class="fas fa-calendar-check"></i> All Bookings</a>
+    <a href="admin-users.html" class="snav-item active"><i class="fas fa-users"></i> Users</a>
+    <a href="admin-cars.html" class="snav-item"><i class="fas fa-car"></i> Manage Cars</a>
+    <a href="admin-feedbacks.html" class="snav-item"><i class="fas fa-star"></i> Feedbacks</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="admin-profile">
+      <div class="ap-avatar">Y</div>
+      <div class="ap-info"><span class="ap-name">Yash</span><span class="ap-role">Administrator</span></div>
+    </div>
+    <button class="sidebar-logout" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  </div>
+</aside>
+
+<main class="admin-main">
+  <div class="admin-topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div class="topbar-title"><h1>Registered Users</h1><p>All users who have signed up on Car Rental</p></div>
+    </div>
+    <div class="topbar-right">
+      <input type="text" class="search-input" id="userSearch" placeholder="Search by name or email..." oninput="filterUsers()"/>
+    </div>
+  </div>
+
+  <!-- USER STATS -->
+  <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;" id="userStats"></div>
+
+  <div class="admin-card">
+    <div class="card-head">
+      <h3><i class="fas fa-users"></i> All Users <span id="userCount" style="color:var(--gray);font-size:0.85rem;font-weight:400;margin-left:8px;"></span></h3>
+    </div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>License No.</th>
+            <th>Registered</th>
+            <th>Total Bookings</th>
+            <th>Total Spent</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="usersTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- USER DETAIL MODAL -->
+<div id="userModal" class="modal-overlay hidden">
+  <div class="admin-modal" style="min-width:480px;">
+    <h3>User Details</h3>
+    <div id="userModalContent" style="margin-top:16px;"></div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/admin.js"></script>
+<script>
+  let allUsers = [], allBookings = [];
+
+  function loadUsers() {
+    allUsers    = JSON.parse(localStorage.getItem('carrental_users') || '[]');
+    allBookings = JSON.parse(localStorage.getItem('carrental_bookings') || '[]');
+
+    const today = new Date().toDateString();
+    const newToday = allUsers.filter(u => u.createdAt && new Date(u.createdAt).toDateString() === today).length;
+    const activeUsers = [...new Set(allBookings.filter(b => b.status === 'confirmed' || b.status === 'active').map(b => b.userId))].length;
+
+    document.getElementById('userStats').innerHTML = `
+      <div class="stat-card blue"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-info"><span class="stat-num">${allUsers.length}</span><span class="stat-label">Total Registered</span></div></div>
+      <div class="stat-card green"><div class="stat-icon"><i class="fas fa-user-plus"></i></div><div class="stat-info"><span class="stat-num">${newToday}</span><span class="stat-label">New Today</span></div></div>
+      <div class="stat-card red"><div class="stat-icon"><i class="fas fa-user-check"></i></div><div class="stat-info"><span class="stat-num">${activeUsers}</span><span class="stat-label">With Active Bookings</span></div></div>`;
+
+    filterUsers();
+  }
+
+  function filterUsers() {
+    const q = document.getElementById('userSearch').value.toLowerCase();
+    const filtered = allUsers.filter(u =>
+      (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q)
+    );
+    document.getElementById('userCount').textContent = `(${filtered.length} users)`;
+
+    const tbody = document.getElementById('usersTbody');
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--gray)">No users found</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(u => {
+      const userBookings = allBookings.filter(b => b.userId === u.id);
+      const totalSpent = userBookings.reduce((s,b) => s+(b.totalPrice||b.total||0), 0);
+      return `<tr>
+        <td>
+          <div class="user-cell">
+            <div class="uc-avatar">${(u.name||'U').charAt(0).toUpperCase()}</div>
+            <strong>${u.name||'Unknown'}</strong>
+          </div>
+        </td>
+        <td>${u.email}</td>
+        <td>${u.phone||'—'}</td>
+        <td><code style="font-size:0.8rem;background:var(--dark4);padding:3px 8px;border-radius:4px;">${u.license||'—'}</code></td>
+        <td><small>${u.createdAt ? fmtDate(u.createdAt) : '—'}</small></td>
+        <td><span class="booking-id">${userBookings.length}</span></td>
+        <td><strong>₹${totalSpent.toLocaleString()}</strong></td>
+        <td>
+          <button class="action-btn view" title="View Details" onclick="viewUser('${u.id}')"><i class="fas fa-eye"></i></button>
+          <button class="action-btn delete" title="Delete User" onclick="deleteUser('${u.id}')"><i class="fas fa-trash"></i></button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function viewUser(uid) {
+    const u = allUsers.find(x => x.id === uid);
+    if (!u) return;
+    const userBookings = allBookings.filter(b => b.userId === uid);
+    const totalSpent = userBookings.reduce((s,b)=>s+(b.totalPrice||b.total||0),0);
+    document.getElementById('userModalContent').innerHTML = `
+      <div style="display:grid;gap:12px;">
+        <div class="modal-info-row"><span>Full Name</span><strong>${u.name}</strong></div>
+        <div class="modal-info-row"><span>Email</span><strong>${u.email}</strong></div>
+        <div class="modal-info-row"><span>Phone</span><strong>${u.phone||'—'}</strong></div>
+        <div class="modal-info-row"><span>License No.</span><strong>${u.license||'—'}</strong></div>
+        <div class="modal-info-row"><span>Registered</span><strong>${u.createdAt?fmtDate(u.createdAt):'—'}</strong></div>
+        <div class="modal-info-row"><span>Total Bookings</span><strong>${userBookings.length}</strong></div>
+        <div class="modal-info-row"><span>Total Spent</span><strong style="color:var(--red)">₹${totalSpent.toLocaleString()}</strong></div>
+      </div>
+      ${userBookings.length > 0 ? `
+      <h4 style="margin-top:20px;margin-bottom:12px;font-size:0.8rem;letter-spacing:2px;text-transform:uppercase;color:var(--red);">BOOKING HISTORY</h4>
+      ${userBookings.map(b => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
+        <span style="color:var(--gray)">${b.id}</span>
+        <span>${b.carName}</span>
+        <span class="status-badge ${b.status}">${capitalize(b.status)}</span>
+        <strong>₹${(b.totalPrice||b.total||0).toLocaleString()}</strong>
+      </div>`).join('')}` : ''}`;
+    document.getElementById('userModal').classList.remove('hidden');
+  }
+
+  function deleteUser(uid) {
+    if (!confirm('Delete this user and all their bookings?')) return;
+    let users = JSON.parse(localStorage.getItem('carrental_users') || '[]');
+    let bookings = JSON.parse(localStorage.getItem('carrental_bookings') || '[]');
+    users = users.filter(u => u.id !== uid);
+    bookings = bookings.filter(b => b.userId !== uid);
+    localStorage.setItem('carrental_users', JSON.stringify(users));
+    localStorage.setItem('carrental_bookings', JSON.stringify(bookings));
+    allUsers = users; allBookings = bookings;
+    filterUsers();
+    showToast('User deleted successfully.');
+  }
+
+  loadUsers();
+</script>
+</body>
+</html>

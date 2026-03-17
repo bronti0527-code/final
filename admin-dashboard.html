@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Car Rental Admin — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="css/admin.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body class="admin-body">
+
+<!-- SIDEBAR -->
+<aside class="admin-sidebar" id="adminSidebar">
+  <div class="sidebar-logo">CAR<span>RENTAL</span> <small>ADMIN</small></div>
+  <nav class="sidebar-nav">
+    <a href="admin-dashboard.html" class="snav-item active"><i class="fas fa-th-large"></i> Dashboard</a>
+    <a href="admin-bookings.html" class="snav-item"><i class="fas fa-calendar-check"></i> All Bookings</a>
+    <a href="admin-users.html" class="snav-item"><i class="fas fa-users"></i> Users</a>
+    <a href="admin-cars.html" class="snav-item"><i class="fas fa-car"></i> Manage Cars</a>
+    <a href="admin-feedbacks.html" class="snav-item"><i class="fas fa-star"></i> Feedbacks</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="admin-profile">
+      <div class="ap-avatar">Y</div>
+      <div class="ap-info">
+        <span class="ap-name" id="adminName">Yash</span>
+        <span class="ap-role">Administrator</span>
+      </div>
+    </div>
+    <button class="sidebar-logout" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="admin-main">
+  <!-- TOP BAR -->
+  <div class="admin-topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div class="topbar-title">
+        <h1>Dashboard</h1>
+        <p>Welcome back, <span id="topAdminName">Yash</span>! Here's what's happening today.</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbarDate"></div>
+      <a href="index.html" class="btn-outline small" target="_blank"><i class="fas fa-external-link-alt"></i> View Site</a>
+    </div>
+  </div>
+
+  <!-- STATS CARDS -->
+  <div class="stats-grid">
+    <div class="stat-card blue">
+      <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+      <div class="stat-info">
+        <span class="stat-num" id="statTotal">0</span>
+        <span class="stat-label">Total Bookings</span>
+        <span class="stat-sub" id="statTodayBookings"></span>
+      </div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon"><i class="fas fa-users"></i></div>
+      <div class="stat-info">
+        <span class="stat-num" id="statUsers">0</span>
+        <span class="stat-label">Registered Users</span>
+        <span class="stat-sub" id="statNewUsers"></span>
+      </div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-icon"><i class="fas fa-rupee-sign"></i></div>
+      <div class="stat-info">
+        <span class="stat-num" id="statRevenue">₹0</span>
+        <span class="stat-label">Total Revenue</span>
+        <span class="stat-sub">All time</span>
+      </div>
+    </div>
+    <div class="stat-card gold">
+      <div class="stat-icon"><i class="fas fa-car"></i></div>
+      <div class="stat-info">
+        <span class="stat-num" id="statActive">0</span>
+        <span class="stat-label">Active Bookings</span>
+        <span class="stat-sub">Currently rented</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MIDDLE ROW: Recent Bookings + Quick Stats -->
+  <div class="dashboard-grid">
+
+    <!-- RECENT BOOKINGS TABLE -->
+    <div class="admin-card wide">
+      <div class="card-head">
+        <h3><i class="fas fa-clock"></i> Recent Bookings</h3>
+        <a href="admin-bookings.html" class="view-all">View All →</a>
+      </div>
+      <div class="table-wrap">
+        <table class="admin-table" id="recentBookingsTable">
+          <thead>
+            <tr>
+              <th>Booking ID</th>
+              <th>Customer</th>
+              <th>Vehicle</th>
+              <th>Dates</th>
+              <th>Amount</th>
+              <th>Payment</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="recentBookingsTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="dashboard-right">
+      <!-- BOOKING STATUS BREAKDOWN -->
+      <div class="admin-card">
+        <div class="card-head"><h3><i class="fas fa-chart-pie"></i> Booking Status</h3></div>
+        <div class="status-breakdown" id="statusBreakdown"></div>
+      </div>
+
+      <!-- REGISTERED USERS LIST -->
+      <div class="admin-card">
+        <div class="card-head">
+          <h3><i class="fas fa-user-friends"></i> Registered Users</h3>
+          <a href="admin-users.html" class="view-all">View All →</a>
+        </div>
+        <div class="users-mini-list" id="usersMiniList"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TOP CARS -->
+  <div class="admin-card" style="margin-top:24px;">
+    <div class="card-head"><h3><i class="fas fa-trophy"></i> Most Booked Cars</h3></div>
+    <div class="top-cars-grid" id="topCarsGrid"></div>
+  </div>
+
+</main>
+
+<!-- STATUS UPDATE MODAL -->
+<div id="statusModal" class="modal-overlay hidden">
+  <div class="admin-modal">
+    <h3>Update Booking Status</h3>
+    <p style="color:var(--gray);margin:8px 0 20px;">Booking ID: <strong id="modalBookingId"></strong></p>
+    <select id="newStatus" class="admin-select">
+      <option value="confirmed">Confirmed</option>
+      <option value="active">Active</option>
+      <option value="completed">Completed</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="saveStatus()">Update</button>
+      <button class="btn-outline" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/admin.js"></script>
+<script>
+  loadDashboard();
+
+  function loadDashboard() {
+    const bookings = JSON.parse(localStorage.getItem('carrental_bookings') || '[]');
+    const users    = JSON.parse(localStorage.getItem('carrental_users') || '[]');
+
+    // Stats
+    const totalRevenue = bookings.reduce((s, b) => s + (b.totalPrice || b.total || 0), 0);
+    const activeCount  = bookings.filter(b => b.status === 'confirmed' || b.status === 'active').length;
+    const today = new Date().toDateString();
+    const todayBookings = bookings.filter(b => new Date(b.bookedOn).toDateString() === today).length;
+    const newUsersToday = users.filter(u => u.createdAt && new Date(u.createdAt).toDateString() === today).length;
+
+    document.getElementById('statTotal').textContent   = bookings.length;
+    document.getElementById('statUsers').textContent   = users.length;
+    document.getElementById('statRevenue').textContent = '₹' + totalRevenue.toLocaleString();
+    document.getElementById('statActive').textContent  = activeCount;
+    document.getElementById('statTodayBookings').textContent = todayBookings > 0 ? `+${todayBookings} today` : 'No bookings today';
+    document.getElementById('statNewUsers').textContent = newUsersToday > 0 ? `+${newUsersToday} today` : 'No new today';
+
+    // Recent bookings (last 8)
+    const recent = [...bookings].sort((a,b) => new Date(b.bookedOn) - new Date(a.bookedOn)).slice(0, 8);
+    const tbody = document.getElementById('recentBookingsTbody');
+    if (recent.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--gray)">No bookings yet</td></tr>`;
+    } else {
+      tbody.innerHTML = recent.map(b => `
+        <tr>
+          <td><span class="booking-id">${b.id}</span></td>
+          <td>${b.userName || getUserName(b.userId, users)}</td>
+          <td>${b.carName}</td>
+          <td><small>${fmtDate(b.from)}<br/>${fmtDate(b.to)}</small></td>
+          <td><strong>₹${(b.totalPrice || b.total || 0).toLocaleString()}</strong></td>
+          <td><span class="pay-badge ${b.paymentStatus === 'paid' ? 'paid' : 'pending'}">${b.paymentStatus === 'paid' ? 'Paid' : 'At Pickup'}</span></td>
+          <td><span class="status-badge ${b.status}">${capitalize(b.status)}</span></td>
+          <td>
+            <button class="action-btn edit" onclick="openStatusModal('${b.id}','${b.status}')"><i class="fas fa-edit"></i></button>
+            <button class="action-btn delete" onclick="deleteBooking('${b.id}')"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Status breakdown
+    const statuses = ['confirmed','active','completed','cancelled'];
+    const statusColors = { confirmed:'#2ec4b6', active:'#e63946', completed:'#888', cancelled:'#ff6b6b' };
+    document.getElementById('statusBreakdown').innerHTML = statuses.map(s => {
+      const count = bookings.filter(b => b.status === s).length;
+      const pct   = bookings.length ? Math.round(count / bookings.length * 100) : 0;
+      return `<div class="sb-item">
+        <div class="sb-top"><span>${capitalize(s)}</span><span>${count}</span></div>
+        <div class="sb-bar"><div class="sb-fill" style="width:${pct}%;background:${statusColors[s]}"></div></div>
+      </div>`;
+    }).join('');
+
+    // Users mini list
+    const miniUsers = users.slice(0, 5);
+    document.getElementById('usersMiniList').innerHTML = miniUsers.length === 0
+      ? `<p style="color:var(--gray);font-size:0.85rem;padding:12px 0">No users registered yet</p>`
+      : miniUsers.map(u => `
+        <div class="user-mini-item">
+          <div class="umi-avatar">${(u.name||'U').charAt(0).toUpperCase()}</div>
+          <div class="umi-info">
+            <strong>${u.name || 'Unknown'}</strong>
+            <span>${u.email}</span>
+          </div>
+          <span class="umi-count">${bookings.filter(b => b.userId === u.id).length} booking(s)</span>
+        </div>`).join('');
+
+    // Top cars
+    const carBookings = {};
+    bookings.forEach(b => { carBookings[b.carName] = (carBookings[b.carName] || 0) + 1; });
+    const topCars = Object.entries(carBookings).sort((a,b) => b[1]-a[1]).slice(0,4);
+    document.getElementById('topCarsGrid').innerHTML = topCars.length === 0
+      ? `<p style="color:var(--gray);font-size:0.85rem">No bookings yet</p>`
+      : topCars.map(([name, count]) => `
+        <div class="top-car-item">
+          <i class="fas fa-car-side" style="color:var(--red);font-size:1.5rem;"></i>
+          <div><strong>${name}</strong><span>${count} booking${count>1?'s':''}</span></div>
+        </div>`).join('');
+
+    // Date
+    document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-IN', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  }
+</script>
+</body>
+</html>

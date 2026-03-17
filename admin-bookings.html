@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Car Rental Admin — All Bookings</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="css/admin.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body class="admin-body">
+
+<aside class="admin-sidebar" id="adminSidebar">
+  <div class="sidebar-logo">CAR<span>RENTAL</span> <small>ADMIN</small></div>
+  <nav class="sidebar-nav">
+    <a href="admin-dashboard.html" class="snav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+    <a href="admin-bookings.html" class="snav-item active"><i class="fas fa-calendar-check"></i> All Bookings</a>
+    <a href="admin-users.html" class="snav-item"><i class="fas fa-users"></i> Users</a>
+    <a href="admin-cars.html" class="snav-item"><i class="fas fa-car"></i> Manage Cars</a>
+    <a href="admin-feedbacks.html" class="snav-item"><i class="fas fa-star"></i> Feedbacks</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="admin-profile">
+      <div class="ap-avatar">Y</div>
+      <div class="ap-info"><span class="ap-name">Yash</span><span class="ap-role">Administrator</span></div>
+    </div>
+    <button class="sidebar-logout" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  </div>
+</aside>
+
+<main class="admin-main">
+  <div class="admin-topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div class="topbar-title"><h1>All Bookings</h1><p>Manage and track all customer bookings</p></div>
+    </div>
+    <div class="topbar-right">
+      <input type="text" class="search-input" id="searchInput" placeholder="Search by ID, customer, car..." oninput="filterBookings()"/>
+      <select class="admin-select small" id="statusFilter" onchange="filterBookings()">
+        <option value="">All Status</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="active">Active</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- QUICK STATS -->
+  <div class="booking-quick-stats" id="bookingQuickStats"></div>
+
+  <div class="admin-card">
+    <div class="card-head">
+      <h3><i class="fas fa-list"></i> Bookings <span id="bookingCountLabel" style="color:var(--gray);font-size:0.85rem;font-weight:400;margin-left:8px;"></span></h3>
+      <button class="btn-primary small" onclick="exportCSV()"><i class="fas fa-download"></i> Export CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Booking ID</th>
+            <th>Customer</th>
+            <th>Vehicle</th>
+            <th>Pick-up Location</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Days</th>
+            <th>Amount</th>
+            <th>Payment</th>
+            <th>Status</th>
+            <th>Booked On</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="bookingsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- STATUS MODAL -->
+<div id="statusModal" class="modal-overlay hidden">
+  <div class="admin-modal">
+    <h3>Update Booking Status</h3>
+    <p style="color:var(--gray);margin:8px 0 20px;">Booking: <strong id="modalBookingId"></strong></p>
+    <select id="newStatus" class="admin-select">
+      <option value="confirmed">Confirmed</option>
+      <option value="active">Active</option>
+      <option value="completed">Completed</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="saveStatus()">Update Status</button>
+      <button class="btn-outline" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVOICE MODAL -->
+<div id="invoiceModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:760px;">
+    <button class="modal-close" onclick="document.getElementById('invoiceModal').classList.add('hidden')"><i class="fas fa-times"></i></button>
+    <div id="invoiceContent"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+      <button class="btn-outline" onclick="document.getElementById('invoiceModal').classList.add('hidden')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/admin.js"></script>
+<script>
+  let allBookings = [];
+  let allUsers = [];
+
+  function loadBookings() {
+    allBookings = JSON.parse(localStorage.getItem('carrental_bookings') || '[]');
+    allUsers    = JSON.parse(localStorage.getItem('carrental_users') || '[]');
+
+    // Quick stats
+    const total     = allBookings.length;
+    const confirmed = allBookings.filter(b => b.status === 'confirmed').length;
+    const active    = allBookings.filter(b => b.status === 'active').length;
+    const completed = allBookings.filter(b => b.status === 'completed').length;
+    const cancelled = allBookings.filter(b => b.status === 'cancelled').length;
+    const revenue   = allBookings.reduce((s,b) => s + (b.totalPrice||b.total||0), 0);
+
+    document.getElementById('bookingQuickStats').innerHTML = `
+      <div class="bqs-item"><i class="fas fa-layer-group"></i><span>${total}</span><small>Total</small></div>
+      <div class="bqs-item green"><i class="fas fa-check-circle"></i><span>${confirmed}</span><small>Confirmed</small></div>
+      <div class="bqs-item red"><i class="fas fa-car"></i><span>${active}</span><small>Active</small></div>
+      <div class="bqs-item gray"><i class="fas fa-flag-checkered"></i><span>${completed}</span><small>Completed</small></div>
+      <div class="bqs-item orange"><i class="fas fa-times-circle"></i><span>${cancelled}</span><small>Cancelled</small></div>
+      <div class="bqs-item gold"><i class="fas fa-rupee-sign"></i><span>₹${revenue.toLocaleString()}</span><small>Revenue</small></div>`;
+
+    filterBookings();
+  }
+
+  function filterBookings() {
+    const q      = document.getElementById('searchInput').value.toLowerCase();
+    const status = document.getElementById('statusFilter').value;
+    let filtered = [...allBookings].sort((a,b) => new Date(b.bookedOn) - new Date(a.bookedOn));
+    if (status) filtered = filtered.filter(b => b.status === status);
+    if (q) filtered = filtered.filter(b =>
+      b.id.toLowerCase().includes(q) ||
+      b.carName.toLowerCase().includes(q) ||
+      b.userName || getUserName(b.userId, allUsers).toLowerCase().includes(q) ||
+      (b.location||'').toLowerCase().includes(q)
+    );
+
+    document.getElementById('bookingCountLabel').textContent = `(${filtered.length} results)`;
+    const tbody = document.getElementById('bookingsTbody');
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--gray)">No bookings found</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filtered.map(b => `
+      <tr>
+        <td><span class="booking-id">${b.id}</span></td>
+        <td>
+          <div class="user-cell">
+            <div class="uc-avatar">${b.userName || getUserName(b.userId, allUsers).charAt(0).toUpperCase()}</div>
+            <span>${b.userName || getUserName(b.userId, allUsers)}</span>
+          </div>
+        </td>
+        <td>${b.carName}</td>
+        <td><small>${b.location || '—'}</small></td>
+        <td>${fmtDate(b.from)}</td>
+        <td>${fmtDate(b.to)}</td>
+        <td>${b.days}</td>
+        <td><strong>₹${(b.totalPrice||b.total||0).toLocaleString()}</strong></td>
+        <td><span class="pay-badge ${b.paymentStatus==='paid'?'paid':'pending'}">${b.paymentStatus==='paid'?'Paid':'At Pickup'}</span></td>
+        <td><span class="status-badge ${b.status}">${capitalize(b.status)}</span></td>
+        <td><small>${fmtDate(b.bookedOn)}</small></td>
+        <td>
+          <div style="display:flex;gap:6px;">
+            <button class="action-btn edit" title="Update Status" onclick="openStatusModal('${b.id}','${b.status}')"><i class="fas fa-edit"></i></button>
+            <button class="action-btn view" title="View Invoice" onclick="viewInvoice('${b.id}')"><i class="fas fa-file-invoice"></i></button>
+            <button class="action-btn delete" title="Delete" onclick="deleteBooking('${b.id}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  function viewInvoice(id) {
+    const b = allBookings.find(x => x.id === id);
+    const u = allUsers.find(x => x.id === b?.userId) || {};
+    if (!b) return;
+    document.getElementById('invoiceContent').innerHTML = generateInvoiceHTML(b, { name: u.name, email: u.email, phone: u.phone, license: u.license });
+    document.getElementById('invoiceModal').classList.remove('hidden');
+  }
+
+  function exportCSV() {
+    const headers = ['Booking ID','Customer','Vehicle','Location','From','To','Days','Amount','Payment','Status','Booked On'];
+    const rows = allBookings.map(b => [
+      b.id, b.userName || getUserName(b.userId, allUsers), b.carName, b.location||'', b.from, b.to, b.days,
+      b.totalPrice||b.total||0, b.paymentStatus, b.status, b.bookedOn
+    ]);
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'drivex-bookings.csv';
+    a.click();
+  }
+
+  loadBookings();
+
+  function generateInvoiceHTML(b, user) {
+    const fmt = d => new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+    return `<div class="invoice-doc">
+      <div class="inv-header">
+        <div class="inv-brand">CAR<span>RENTAL</span></div>
+        <div class="inv-meta">
+          <div class="inv-badge">INVOICE</div>
+          <p><strong>No:</strong> INV-${b.id}</p>
+          <p><strong>Date:</strong> ${fmt(b.bookedOn)}</p>
+          <p><strong>Status:</strong> <span class="inv-status ${b.status}">${b.status.toUpperCase()}</span></p>
+        </div>
+      </div>
+      <div class="inv-parties">
+        <div class="inv-from"><h5>FROM</h5><strong>Car Rental Car Rentals</strong><p>MG Road, Bangalore – 560001</p><p>hello@carrental.in | +91 98765 43210</p><p>GSTIN: 29AAAAA0000A1Z5</p></div>
+        <div class="inv-to"><h5>BILL TO</h5><strong>${user.name||'Customer'}</strong><p>${user.email||''}</p><p>${user.phone||''}</p><p>License: ${user.license||'N/A'}</p></div>
+      </div>
+      <h5 style="font-size:0.68rem;letter-spacing:3px;text-transform:uppercase;color:#e63946;margin-bottom:8px;">RENTAL DETAILS</h5>
+      <table class="inv-table">
+        <thead><tr><th>Description</th><th>Rate</th><th>Days</th><th>Amount</th></tr></thead>
+        <tbody>
+          <tr><td>${b.carName} Rental</td><td>₹${b.basePrice||b.price||0}/day</td><td>${b.days}</td><td>₹${((b.basePrice||b.price||0)*b.days).toLocaleString()}</td></tr>
+          ${(b.addons||[]).map(a=>`<tr><td>${a.name}</td><td>₹${a.rate}/day</td><td>${b.days}</td><td>₹${(a.rate*b.days).toLocaleString()}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <div class="inv-totals">
+        <div class="inv-total-row"><span>Subtotal</span><span>₹${(b.subtotal||0).toLocaleString()}</span></div>
+        <div class="inv-total-row"><span>GST (18%)</span><span>₹${(b.gst||0).toLocaleString()}</span></div>
+        <div class="inv-total-row grand"><span>TOTAL</span><span>₹${(b.totalPrice||b.total||0).toLocaleString()}</span></div>
+        <div class="inv-total-row"><span>Payment</span><span>${b.paymentStatus==='paid'?'✅ Online':'🕐 At Pickup'}</span></div>
+      </div>
+      <div class="inv-footer"><p class="inv-note">Thank you for choosing Car Rental!</p></div>
+    </div>`;
+  }
+</script>
+</body>
+</html>

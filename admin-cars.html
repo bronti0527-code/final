@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Car Rental Admin — Manage Cars</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="css/admin.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body class="admin-body">
+
+<aside class="admin-sidebar" id="adminSidebar">
+  <div class="sidebar-logo">CAR<span>RENTAL</span> <small>ADMIN</small></div>
+  <nav class="sidebar-nav">
+    <a href="admin-dashboard.html" class="snav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+    <a href="admin-bookings.html" class="snav-item"><i class="fas fa-calendar-check"></i> All Bookings</a>
+    <a href="admin-users.html" class="snav-item"><i class="fas fa-users"></i> Users</a>
+    <a href="admin-cars.html" class="snav-item"><i class="fas fa-car"></i> Manage Cars</a>
+    <a href="admin-feedbacks.html" class="snav-item"><i class="fas fa-star"></i> Feedbacks</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="admin-profile">
+      <div class="ap-avatar">Y</div>
+      <div class="ap-info"><span class="ap-name">Yash</span><span class="ap-role">Administrator</span></div>
+    </div>
+    <button class="sidebar-logout" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  </div>
+</aside>
+
+<main class="admin-main">
+  <div class="admin-topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div class="topbar-title"><h1>Manage Cars</h1><p>View, edit and manage the vehicle fleet</p></div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-primary small" onclick="openAddCar()"><i class="fas fa-plus"></i> Add New Car</button>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    <div class="card-head">
+      <h3><i class="fas fa-car"></i> Fleet <span id="carCount" style="color:var(--gray);font-size:0.85rem;font-weight:400;margin-left:8px;"></span></h3>
+      <input type="text" class="search-input" id="carSearch" placeholder="Search cars..." oninput="filterCars()" style="width:200px;"/>
+    </div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Car</th><th>Type</th><th>Fuel</th><th>Transmission</th><th>Seats</th><th>Price/Day</th><th>Bookings</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="carsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- ADD/EDIT CAR MODAL -->
+<div id="carModal" class="modal-overlay hidden">
+  <div class="admin-modal" style="min-width:520px;">
+    <h3 id="carModalTitle">Add New Car</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px;">
+      <div class="field-group"><label>Car Name *</label><div class="field-wrap"><i class="fas fa-car"></i><input type="text" id="cName" placeholder="e.g. Toyota Camry"/></div></div>
+      <div class="field-group"><label>Type *</label><div class="field-wrap"><i class="fas fa-tag"></i><select id="cType"><option>Sedan</option><option>SUV</option><option>Luxury</option><option>Sports</option><option>Hatchback</option><option>Van</option></select></div></div>
+      <div class="field-group"><label>Fuel *</label><div class="field-wrap"><i class="fas fa-gas-pump"></i><select id="cFuel"><option>Petrol</option><option>Diesel</option><option>Electric</option><option>Hybrid</option></select></div></div>
+      <div class="field-group"><label>Transmission *</label><div class="field-wrap"><i class="fas fa-cog"></i><select id="cTrans"><option>Automatic</option><option>Manual</option></select></div></div>
+      <div class="field-group"><label>Seats *</label><div class="field-wrap"><i class="fas fa-users"></i><input type="number" id="cSeats" min="2" max="9" value="5"/></div></div>
+      <div class="field-group"><label>Price Per Day (₹) *</label><div class="field-wrap"><i class="fas fa-rupee-sign"></i><input type="number" id="cPrice" min="500" placeholder="e.g. 2500"/></div></div>
+    </div>
+    <div class="msg error-msg" id="carErr" style="margin-top:12px;"></div>
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="saveCar()"><i class="fas fa-save"></i> Save Car</button>
+      <button class="btn-outline" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/admin.js"></script>
+<script src="js/cars-data.js"></script>
+<script>
+  let editingCarId = null;
+
+  // Load admin-managed cars from localStorage, fallback to allCars from cars-data.js
+  function getAdminCars() {
+    const saved = localStorage.getItem('carrental_admin_cars');
+    return saved ? JSON.parse(saved) : allCars.map(c => ({ ...c }));
+  }
+  function saveAdminCars(cars) {
+    localStorage.setItem('carrental_admin_cars', JSON.stringify(cars));
+  }
+
+  function loadCars() { filterCars(); }
+
+  function filterCars() {
+    const q = document.getElementById('carSearch').value.toLowerCase();
+    const cars = getAdminCars().filter(c => c.name.toLowerCase().includes(q) || c.type.toLowerCase().includes(q));
+    const bookings = JSON.parse(localStorage.getItem('carrental_bookings') || '[]');
+    document.getElementById('carCount').textContent = `(${cars.length} vehicles)`;
+
+    const tbody = document.getElementById('carsTbody');
+    tbody.innerHTML = cars.map(c => {
+      const bCount = bookings.filter(b => b.carId === c.id || b.carName === c.name).length;
+      return `<tr>
+        <td><div class="user-cell"><div class="uc-avatar" style="background:${c.color||'var(--red)'}22;color:${c.color||'var(--red)'}"><i class="fas ${c.icon||'fa-car'}"></i></div><strong>${c.name}</strong></div></td>
+        <td><span class="type-tag">${c.type}</span></td>
+        <td>${c.fuel}</td>
+        <td>${c.transmission}</td>
+        <td>${c.seats}</td>
+        <td><strong>₹${c.price.toLocaleString()}</strong></td>
+        <td>${bCount}</td>
+        <td><span class="status-badge ${c.available===false?'cancelled':'confirmed'}">${c.available===false?'Unavailable':'Available'}</span></td>
+        <td>
+          <div style="display:flex;gap:6px;">
+            <button class="action-btn edit" onclick="openEditCar(${c.id})"><i class="fas fa-edit"></i></button>
+            <button class="action-btn ${c.available===false?'view':'delete'}" onclick="toggleAvailability(${c.id})" title="${c.available===false?'Mark Available':'Mark Unavailable'}"><i class="fas fa-${c.available===false?'check':'ban'}"></i></button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function openAddCar() {
+    editingCarId = null;
+    document.getElementById('carModalTitle').textContent = 'Add New Car';
+    ['cName','cSeats','cPrice'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('cSeats').value = 5;
+    document.getElementById('carErr').style.display = 'none';
+    document.getElementById('carModal').classList.remove('hidden');
+  }
+
+  function openEditCar(id) {
+    const car = getAdminCars().find(c => c.id === id);
+    if (!car) return;
+    editingCarId = id;
+    document.getElementById('carModalTitle').textContent = 'Edit Car';
+    document.getElementById('cName').value  = car.name;
+    document.getElementById('cType').value  = car.type;
+    document.getElementById('cFuel').value  = car.fuel;
+    document.getElementById('cTrans').value = car.transmission;
+    document.getElementById('cSeats').value = car.seats;
+    document.getElementById('cPrice').value = car.price;
+    document.getElementById('carErr').style.display = 'none';
+    document.getElementById('carModal').classList.remove('hidden');
+  }
+
+  function saveCar() {
+    const name  = document.getElementById('cName').value.trim();
+    const type  = document.getElementById('cType').value;
+    const fuel  = document.getElementById('cFuel').value;
+    const trans = document.getElementById('cTrans').value;
+    const seats = parseInt(document.getElementById('cSeats').value);
+    const price = parseInt(document.getElementById('cPrice').value);
+    const err   = document.getElementById('carErr');
+
+    if (!name) { err.textContent='Please enter car name.'; err.style.display='block'; return; }
+    if (!price || price < 100) { err.textContent='Please enter valid price.'; err.style.display='block'; return; }
+
+    let cars = getAdminCars();
+    if (editingCarId) {
+      cars = cars.map(c => c.id === editingCarId ? {...c, name, type, fuel, transmission:trans, seats, price} : c);
+      showToast('Car updated successfully!');
+    } else {
+      const newCar = { id: Date.now(), name, type, fuel, transmission: trans, seats, price, color:'#e63946', icon:'fa-car', available: true };
+      cars.push(newCar);
+      showToast('New car added successfully!');
+    }
+    saveAdminCars(cars);
+    closeModal();
+    filterCars();
+  }
+
+  function toggleAvailability(id) {
+    let cars = getAdminCars();
+    cars = cars.map(c => c.id === id ? {...c, available: c.available===false ? true : false} : c);
+    saveAdminCars(cars);
+    filterCars();
+  }
+
+  loadCars();
+</script>
+</body>
+</html>
